@@ -8,8 +8,7 @@ interface MyPluginSettings {
   region: string;
   adminSecret: string;
   cache: {
-    noteByPath: { [path: string]: number };
-    fileByPath: { [path: string]: number };
+    noteByPath: { [path: string]: number | undefined };
   };
 }
 
@@ -18,7 +17,7 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
   subdomain: '',
   region: '',
   adminSecret: '',
-  cache: { noteByPath: {}, fileByPath: {} },
+  cache: { noteByPath: {} },
 };
 
 export default class MyPlugin extends Plugin {
