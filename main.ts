@@ -1,17 +1,24 @@
 import { Plugin } from 'obsidian';
-import { publish } from 'src/commands/publish';
+import { Publisher } from 'src/Publisher';
 import { SettingTab } from 'src/SettingTab';
-
-// Remember to rename these classes and interfaces!
 
 interface MyPluginSettings {
   publicDir: string;
-  publishDir: string;
+  subdomain: string;
+  region: string;
+  adminSecret: string;
+  cache: {
+    noteByPath: { [path: string]: number };
+    fileByPath: { [path: string]: number };
+  };
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
   publicDir: 'Public',
-  publishDir: '',
+  subdomain: '',
+  region: '',
+  adminSecret: '',
+  cache: { noteByPath: {}, fileByPath: {} },
 };
 
 export default class MyPlugin extends Plugin {
@@ -82,7 +89,7 @@ export default class MyPlugin extends Plugin {
       id: 'publish',
       name: 'Publish',
       callback: () => {
-        publish(this);
+        new Publisher(this).publish();
       },
     });
 

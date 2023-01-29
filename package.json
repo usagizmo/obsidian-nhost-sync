@@ -15,6 +15,7 @@
   "devDependencies": {
     "@codemirror/state": "^6.2.0",
     "@codemirror/view": "^6.7.3",
+    "@types/mime": "^3.0.1",
     "@types/node": "^16.11.6",
     "@typescript-eslint/eslint-plugin": "5.29.0",
     "@typescript-eslint/parser": "5.29.0",
@@ -30,5 +31,13 @@
     "@codemirror/state": "^6.2.0",
     "@codemirror/view": "^6.7.3",
     "eslint": "^8.32.0"
+  },
+  "dependencies": {
+    "@nhost/nhost-js": "^1.13.1",
+    "axios": "^1.2.6",
+    "form-data": "^4.0.0",
+    "graphql": "^16.6.0",
+    "graphql-request": "^5.1.0",
+    "mime": "^3.0.0"
   }
 }

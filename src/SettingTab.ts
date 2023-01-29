@@ -27,12 +27,36 @@ export class SettingTab extends PluginSettingTab {
         })
     );
 
-    new Setting(containerEl).setName('Publish Directory').addText((text) =>
+    // new Setting(containerEl).setName('Publish Directory').addText((text) =>
+    //   text
+    //     .setPlaceholder('/Users/username/Desktop')
+    //     .setValue(String(this.plugin.settings.publishDir))
+    //     .onChange(async (value) => {
+    //       this.plugin.settings.publishDir = value.replace(/\/$/, '');
+    //       await this.plugin.saveSettings();
+    //     })
+    // );
+
+    new Setting(containerEl).setName('Nhost (Subdomain)').addText((text) =>
+      text.setValue(String(this.plugin.settings.subdomain)).onChange(async (value) => {
+        this.plugin.settings.subdomain = value;
+        await this.plugin.saveSettings();
+      })
+    );
+
+    new Setting(containerEl).setName('Nhost (Region)').addText((text) =>
+      text.setValue(String(this.plugin.settings.region)).onChange(async (value) => {
+        this.plugin.settings.region = value;
+        await this.plugin.saveSettings();
+      })
+    );
+
+    new Setting(containerEl).setName('X-HASURA-ADMIN-SECRET').addText((text) =>
       text
-        .setPlaceholder('/Users/username/Desktop')
-        .setValue(String(this.plugin.settings.publishDir))
+        .setPlaceholder('****')
+        .setValue(String(this.plugin.settings.adminSecret))
         .onChange(async (value) => {
-          this.plugin.settings.publishDir = value.replace(/\/$/, '');
+          this.plugin.settings.adminSecret = value;
           await this.plugin.saveSettings();
         })
     );
