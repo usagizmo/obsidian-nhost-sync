@@ -1,7 +1,7 @@
 {
   "name": "obsidian-nhost-sync",
   "version": "1.0.0",
-  "description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+  "description": "Sync note attachments under a specific Obsidian directory to Nhost's Database / Storage",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
