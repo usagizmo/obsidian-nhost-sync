@@ -10,8 +10,6 @@ import { MDNote } from './models/MDNote';
 import { FileNote } from './models/FileNote';
 import { INote } from './models/INote';
 
-type NoteMeta = { path: string; fileId: string | null };
-
 const getBasePath = (adapter: DataAdapter): string => {
   if (!(adapter instanceof FileSystemAdapter)) {
     throw new Error('Vault adapter is not a FileSystemAdapter');
@@ -23,17 +21,15 @@ export class Publisher {
   plugin: MyPlugin;
   nhost: NhostClient;
   client: GraphQLClient;
-  files: TFile[];
+  notes: TFile[];
 
   constructor(plugin: MyPlugin) {
     const { settings } = plugin;
-    const endpoint = `https://${settings.subdomain}.hasura.${settings.region}.nhost.run/v1/graphql`;
 
     this.plugin = plugin;
 
-    if (!settings.subdomain || !settings.region || !settings.adminSecret) {
+    if (!settings.subdomain || !settings.region || !settings.endpoint || !settings.adminSecret) {
       new Notice('Please set all settings.');
-      return;
     }
 
     this.nhost = new NhostClient({
@@ -42,86 +38,85 @@ export class Publisher {
       adminSecret: settings.adminSecret,
     });
 
-    this.client = new GraphQLClient(endpoint, {
+    this.client = new GraphQLClient(settings.endpoint, {
       headers: {
         'x-hasura-admin-secret': settings.adminSecret,
       },
     });
 
-    this.files = app.vault.getFiles().filter((file) => file.path.startsWith(settings.publicDir));
+    this.notes = app.vault.getFiles().filter((file) => file.path.startsWith(settings.publicDir));
   }
 
   async publish() {
-    const notes = this.files.filter((file) => file.extension === 'md');
-    const files = this.files.filter((file) => file.extension !== 'md');
+    const notes = this.notes.filter((file) => file.extension === 'md');
+    const notesWithFile = this.notes.filter((file) => file.extension !== 'md');
 
-    await this.syncNotes(notes);
-    await this.syncFiles(files);
-    await this.deleteUnusedNotes({
-      notes,
-      files,
-    });
+    await this.uploadNotes(notes);
+    await this.uploadNotesWithFile(notesWithFile);
+
+    await this.deleteUnusedDBNotes();
+    await this.deleteUnusedDBFiles();
   }
 
-  private async syncNotes(notes: TFile[]) {
+  private async uploadNotes(notes: TFile[]) {
     const { settings, app } = this.plugin;
 
-    const shouldUpdateNotes = notes.filter(
+    const shouldUploadNotes = notes.filter(
       (file) => settings.cache.noteByPath[file.path] !== file.stat.mtime
     );
 
-    const dbNotes = await Promise.all(
-      shouldUpdateNotes.map(async (file) => {
+    const mdNotes = await Promise.all(
+      shouldUploadNotes.map(async (file) => {
         const content = await app.vault.cachedRead(file);
         return new MDNote(file, content);
       })
     );
 
-    this.insertNotes('Note', dbNotes);
+    this.insertNotes('Note', mdNotes);
   }
 
-  private async syncFiles(files: TFile[]) {
+  private async uploadNotesWithFile(notes: TFile[]) {
     const { settings } = this.plugin;
 
-    const intermediateShouldUpdateFiles = files.filter(
+    const intermediateShouldUploadNotes = notes.filter(
       (file) => settings.cache.noteByPath[file.path] !== file.stat.mtime
     );
 
-    if (!intermediateShouldUpdateFiles.length) {
+    if (!intermediateShouldUploadNotes.length) {
       console.log(`File: No notes to sync.`);
       return;
     }
 
-    console.log(`File: Uploading ${intermediateShouldUpdateFiles.length} files.`);
+    console.log(`File: Uploading ${intermediateShouldUploadNotes.length} files.`);
     const fileIdOrNulls = await Promise.all(
-      intermediateShouldUpdateFiles.map((file) => this.uploadFile(file))
+      intermediateShouldUploadNotes.map((note) => this.uploadToStorage(note))
     );
     console.log(`File: Uploaded ${fileIdOrNulls.filter(Boolean).length} files.`);
 
-    const shouldUpdateNotes = intermediateShouldUpdateFiles.filter(
+    const shouldUploadNotes = intermediateShouldUploadNotes.filter(
       (_, i) => fileIdOrNulls[i] !== null
     );
 
-    const dbNotes = await Promise.all(
-      shouldUpdateNotes.map(async (file, i) => {
+    const fileNotes = await Promise.all(
+      shouldUploadNotes.map(async (file, i) => {
         const fileId = fileIdOrNulls[i] as string;
         return new FileNote(file, fileId);
       })
     );
 
-    this.insertNotes('File', dbNotes);
+    this.insertNotes('File', fileNotes);
   }
 
-  private async uploadFile(file: TFile) {
-    const { app, settings } = this.plugin;
+  private async uploadToStorage(note: TFile): Promise<string | null> {
+    const { app } = this.plugin;
     const basePath = getBasePath(app.vault.adapter);
 
     const fd = new FormData();
-    const path = join(basePath, file.path);
+    const path = join(basePath, note.path);
     const buffer = await readFile(path);
-    const type = mime.getType(file.extension);
+    const type = mime.getType(note.extension);
     if (!type) {
-      new Notice(`Could not determine mime type for ${file.path}`);
+      new Notice(`Could not determine mime type for ${note.path}`);
       return null;
     }
 
@@ -129,7 +124,7 @@ export class Publisher {
     fd.append('file', blob);
     const res = await this.nhost.storage.upload({
       formData: fd,
-      name: file.name,
+      name: note.name,
     });
 
     if (!res.fileMetadata) {
@@ -145,11 +140,11 @@ export class Publisher {
     const { settings } = this.plugin;
 
     if (!iNotes.length) {
-      console.log(`${title}: No notes to sync.`);
+      console.log(`${title}: No notes to insert.`);
       return;
     }
 
-    console.log(`${title}: Syncing ${iNotes.length} notes.`);
+    console.log(`${title}: Inserting ${iNotes.length} notes.`);
 
     const query = gql`
       mutation InsertNotes($objects: [notes_insert_input!]!) {
@@ -164,7 +159,7 @@ export class Publisher {
     const {
       insert_notes: { affected_rows },
     } = await this.client.request(query, { objects: iNotes.map((iNote) => iNote.dbNote) });
-    console.log(`${title}: Updated ${affected_rows} notes.`);
+    console.log(`${title}: Inserted ${affected_rows} notes.`);
 
     const nextNoteByPath = iNotes.reduce((acc, iNote) => {
       acc[iNote.dbNote.path] = iNote.mtime;
@@ -178,37 +173,25 @@ export class Publisher {
     await this.plugin.saveSettings();
   }
 
-  private async deleteUnusedNotes({ notes, files }: { notes: TFile[]; files: TFile[] }) {
+  private async deleteUnusedDBNotes() {
     const { settings } = this.plugin;
 
-    const cachedNoteByPath = settings.cache.noteByPath;
-
-    const noteMetaListQuery = gql`
-      query NoteMetaList {
+    const notesQuery = gql`
+      query Notes {
         notes {
-          fileId
           path
-        }
-        files {
-          id
         }
       }
     `;
-    const { notes: noteMetaList, files: filesRes } = await this.client.request<{
-      notes: NoteMeta[];
-      files: { id: string }[];
-    }>(noteMetaListQuery);
+    const { notes: notesRes } = await this.client.request<{
+      notes: { path: string }[];
+    }>(notesQuery);
+    const dbNotePaths = notesRes.map((note) => note.path);
 
-    console.log(`DB count: notes [${noteMetaList.length}], files [${filesRes.length}]`);
+    console.log(`Notes: local [${this.notes.length}], DB [${dbNotePaths.length}]`);
 
-    const dbNotePaths = noteMetaList.map((note) => note.path);
-    const dbNoteFileIdsSet = new Set(
-      noteMetaList.map((note) => note.fileId).filter(Boolean) as string[]
-    );
-    const dbFileIds = filesRes.map((file) => file.id);
-
-    const shouldDeleteNotePaths = dbNotePaths.filter((path) => !cachedNoteByPath[path]);
-    const shouldDeleteNoteFileIds = dbFileIds.filter((fileId) => !dbNoteFileIdsSet.has(fileId));
+    const notePathSet = new Set(this.notes.map((note) => note.path));
+    const shouldDeleteNotePaths = dbNotePaths.filter((path) => !notePathSet.has(path));
 
     const deleteNotesMutation = gql`
       mutation DeleteNotes($paths: [String!]) {
@@ -231,9 +214,32 @@ export class Publisher {
     } else {
       console.log(`No notes to delete.`);
     }
+  }
+
+  private async deleteUnusedDBFiles() {
+    const filesQuery = gql`
+      query Files {
+        notes {
+          fileId
+        }
+        files {
+          id
+        }
+      }
+    `;
+    const { notes: notesRes, files: filesRes } = await this.client.request<{
+      notes: { fileId: string | null }[];
+      files: { id: string }[];
+    }>(filesQuery);
+    const dbNoteFileIdSet = new Set(notesRes.map((note) => note.fileId).filter(Boolean));
+    const dbFileIds = filesRes.map((file) => file.id);
+
+    console.log(`Files: notes [${dbNoteFileIdSet.size}], files [${dbFileIds.length}]`);
+
+    const shouldDeleteFileIds = dbFileIds.filter((fileId) => !dbNoteFileIdSet.has(fileId));
 
     const storageDeleteRes = await Promise.all(
-      shouldDeleteNoteFileIds.map((fileId) => this.nhost.storage.delete({ fileId }))
+      shouldDeleteFileIds.map((fileId) => this.nhost.storage.delete({ fileId }))
     );
 
     if (storageDeleteRes.length) {

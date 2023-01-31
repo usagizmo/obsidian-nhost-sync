@@ -6,6 +6,7 @@ interface MyPluginSettings {
   publicDir: string;
   subdomain: string;
   region: string;
+  endpoint: string;
   adminSecret: string;
   cache: {
     noteByPath: { [path: string]: number | undefined };
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
   publicDir: 'Public',
   subdomain: '',
   region: '',
+  endpoint: '',
   adminSecret: '',
   cache: { noteByPath: {} },
 };

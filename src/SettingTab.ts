@@ -1,5 +1,5 @@
 import MyPlugin from 'main';
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 
 export class SettingTab extends PluginSettingTab {
   plugin: MyPlugin;
@@ -16,8 +16,8 @@ export class SettingTab extends PluginSettingTab {
 
     containerEl.createEl('h2', { text: 'Settings for my awesome plugin.' });
 
-    new Setting(containerEl).setName('Public Directory').addText((text) =>
-      text
+    new Setting(containerEl).setName('Public Directory').addText((cb) =>
+      cb
         .setPlaceholder('Public')
         // .setDesc("It's a secret")
         .setValue(this.plugin.settings.publicDir)
@@ -27,32 +27,29 @@ export class SettingTab extends PluginSettingTab {
         })
     );
 
-    // new Setting(containerEl).setName('Publish Directory').addText((text) =>
-    //   text
-    //     .setPlaceholder('/Users/username/Desktop')
-    //     .setValue(String(this.plugin.settings.publishDir))
-    //     .onChange(async (value) => {
-    //       this.plugin.settings.publishDir = value.replace(/\/$/, '');
-    //       await this.plugin.saveSettings();
-    //     })
-    // );
-
-    new Setting(containerEl).setName('Nhost (Subdomain)').addText((text) =>
-      text.setValue(String(this.plugin.settings.subdomain)).onChange(async (value) => {
+    new Setting(containerEl).setName('Nhost (Subdomain)').addText((cb) =>
+      cb.setValue(String(this.plugin.settings.subdomain)).onChange(async (value) => {
         this.plugin.settings.subdomain = value;
         await this.plugin.saveSettings();
       })
     );
 
-    new Setting(containerEl).setName('Nhost (Region)').addText((text) =>
-      text.setValue(String(this.plugin.settings.region)).onChange(async (value) => {
+    new Setting(containerEl).setName('Nhost (Region)').addText((cb) =>
+      cb.setValue(String(this.plugin.settings.region)).onChange(async (value) => {
         this.plugin.settings.region = value;
         await this.plugin.saveSettings();
       })
     );
 
-    new Setting(containerEl).setName('X-HASURA-ADMIN-SECRET').addText((text) =>
-      text
+    new Setting(containerEl).setName('Graphql Endpoint').addText((cb) =>
+      cb.setValue(String(this.plugin.settings.endpoint)).onChange(async (value) => {
+        this.plugin.settings.endpoint = value;
+        await this.plugin.saveSettings();
+      })
+    );
+
+    new Setting(containerEl).setName('X-HASURA-ADMIN-SECRET').addText((cb) =>
+      cb
         .setPlaceholder('****')
         .setValue(String(this.plugin.settings.adminSecret))
         .onChange(async (value) => {
@@ -60,5 +57,13 @@ export class SettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         })
     );
+
+    new Setting(containerEl).setName('Clear all caches').addButton((cb) => {
+      cb.setButtonText('Clear').onClick(async () => {
+        this.plugin.settings.cache = { noteByPath: {} };
+        new Notice('All caches cleared');
+        await this.plugin.saveSettings();
+      });
+    });
   }
 }
