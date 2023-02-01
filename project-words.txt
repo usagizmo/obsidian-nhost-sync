@@ -1,0 +1,4 @@
+hasura
+nhost
+pkey
+usagizmo
