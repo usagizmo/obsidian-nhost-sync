@@ -14,27 +14,31 @@ export class SettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    containerEl.createEl('h2', { text: 'Settings for my awesome plugin.' });
+    containerEl.createEl('h2', { text: 'Nhost Sync - Settings' });
 
-    new Setting(containerEl).setName('Public Directory').addText((cb) =>
-      cb
-        .setPlaceholder('Public')
-        // .setDesc("It's a secret")
-        .setValue(this.plugin.settings.publicDir)
-        .onChange(async (value) => {
-          this.plugin.settings.publicDir = value.replace(/\/$/, '');
-          await this.plugin.saveSettings();
-        })
-    );
+    new Setting(containerEl)
+      .setName('Public Directory')
+      .setDesc('Directory to be synchronized')
+      .addText((cb) =>
+        cb
+          .setPlaceholder('Public')
+          .setValue(this.plugin.settings.publicDir)
+          .onChange(async (value) => {
+            this.plugin.settings.publicDir = value.replace(/\/$/, '');
+            await this.plugin.saveSettings();
+          })
+      );
 
-    new Setting(containerEl).setName('Nhost (Subdomain)').addText((cb) =>
+    new Setting(containerEl).setHeading().setName('Nhost');
+
+    new Setting(containerEl).setName('Subdomain').addText((cb) =>
       cb.setValue(String(this.plugin.settings.subdomain)).onChange(async (value) => {
         this.plugin.settings.subdomain = value;
         await this.plugin.saveSettings();
       })
     );
 
-    new Setting(containerEl).setName('Nhost (Region)').addText((cb) =>
+    new Setting(containerEl).setName('Region').addText((cb) =>
       cb.setValue(String(this.plugin.settings.region)).onChange(async (value) => {
         this.plugin.settings.region = value;
         await this.plugin.saveSettings();
@@ -57,6 +61,8 @@ export class SettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         })
     );
+
+    new Setting(containerEl).setHeading().setName('Caches');
 
     new Setting(containerEl).setName('Clear all caches').addButton((cb) => {
       cb.setButtonText('Clear').onClick(async () => {
