@@ -14,24 +14,26 @@ ref. https://github.com/obsidianmd/obsidian-sample-plugin
 
 ## Nhost DB settings
 
-### public/notes
+### `public/notes` (create new)
+
+#### Columns
 
 - **path**: (text, primary key, unique) File path from Vault root
 - **created_at**: (→ createdAt - timestamp with time zone, default: now())
 - **updated_at**: (→ updatedAt - timestamp with time zone, default: now())
-- **basename**: (text) filename without extension
-- **extension**: (text) File extension
-- **name**: (text) File name
+- **basename**: (text) File name without extension
+- **extension**: (text) extension
+- **name**: (text) filename
 - **size**: (integer) file size
-- **content?**: (text, nullable) For .md notes, the content of the file
-- **fileId?**: (text, nullable) For attachment notes, the associated `files.id`
+- **content?**: (text, nullable) For `.md` note, the content of the file
+- **fileId?**: (text, nullable) For attachment note, this is associated with `files.id`
 
 #### Permissions
 
 - **admin**: `insert`, `select`, `update`, `delete`
 - **public**: `select`
 
-### storage/files (default)
+### `storage/files` (existing)
 
 #### Permissions
 
