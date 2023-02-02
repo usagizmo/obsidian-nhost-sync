@@ -1,6 +1,6 @@
 {
   "name": "obsidian-nhost-sync",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Sync note attachments under a specific Obsidian directory to Nhost's Database / Storage",
   "main": "main.js",
   "scripts": {
