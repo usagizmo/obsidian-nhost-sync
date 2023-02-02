@@ -29,7 +29,7 @@ export class SettingTab extends PluginSettingTab {
           })
       );
 
-    new Setting(containerEl).setHeading().setName('Nhost');
+    new Setting(containerEl).setHeading().setName('Nhost').setDesc('Used in the `Publish` command');
 
     new Setting(containerEl).setName('Subdomain').addText((cb) =>
       cb.setValue(String(this.plugin.settings.subdomain)).onChange(async (value) => {
@@ -71,5 +71,20 @@ export class SettingTab extends PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
+
+    new Setting(containerEl).setHeading().setName('Server [optional]');
+
+    new Setting(containerEl)
+      .setName('Deploy hook URL')
+      .setDesc('Used in the `Deploy` command and is called with POST')
+      .addText((cb) =>
+        cb
+          .setPlaceholder('https://api.vercel.com/v1/integrations/deploy/prj_*')
+          .setValue(String(this.plugin.settings.deployHook))
+          .onChange(async (value) => {
+            this.plugin.settings.deployHook = value;
+            await this.plugin.saveSettings();
+          })
+      );
   }
 }
