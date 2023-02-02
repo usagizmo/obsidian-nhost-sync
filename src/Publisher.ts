@@ -56,6 +56,8 @@ export class Publisher {
 
     await this.deleteUnusedDBNotes();
     await this.deleteUnusedDBFiles();
+
+    new Notice('Published');
   }
 
   private async uploadNotes(notes: TFile[]) {

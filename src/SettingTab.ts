@@ -29,7 +29,7 @@ export class SettingTab extends PluginSettingTab {
           })
       );
 
-    new Setting(containerEl).setHeading().setName('Nhost');
+    new Setting(containerEl).setHeading().setName('Nhost').setDesc('Used in the `Publish` command');
 
     new Setting(containerEl).setName('Subdomain').addText((cb) =>
       cb.setValue(String(this.plugin.settings.subdomain)).onChange(async (value) => {
