@@ -85,7 +85,7 @@ export class Publisher {
     );
 
     if (!intermediateShouldUploadNotes.length) {
-      console.log(`File: No notes to sync.`);
+      console.log(`File: No files to upload.`);
       return;
     }
 
