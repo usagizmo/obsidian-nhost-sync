@@ -71,5 +71,20 @@ export class SettingTab extends PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
+
+    new Setting(containerEl).setHeading().setName('Server [optional]');
+
+    new Setting(containerEl)
+      .setName('Deploy hook URL')
+      .setDesc('Used in the `Deploy` command and is called with POST')
+      .addText((cb) =>
+        cb
+          .setPlaceholder('https://api.vercel.com/v1/integrations/deploy/prj_*')
+          .setValue(String(this.plugin.settings.deployHook))
+          .onChange(async (value) => {
+            this.plugin.settings.deployHook = value;
+            await this.plugin.saveSettings();
+          })
+      );
   }
 }

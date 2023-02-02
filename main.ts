@@ -1,4 +1,5 @@
 import { Plugin } from 'obsidian';
+import { deploy } from 'src/deploy';
 import { Publisher } from 'src/Publisher';
 import { SettingTab } from 'src/SettingTab';
 
@@ -8,6 +9,7 @@ interface MyPluginSettings {
   region: string;
   endpoint: string;
   adminSecret: string;
+  deployHook: string;
   cache: {
     noteByPath: { [path: string]: number | undefined };
   };
@@ -19,6 +21,7 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
   region: '',
   endpoint: '',
   adminSecret: '',
+  deployHook: '',
   cache: { noteByPath: {} },
 };
 
@@ -91,6 +94,13 @@ export default class MyPlugin extends Plugin {
       name: 'Publish',
       callback: () => {
         new Publisher(this).publish();
+
+    this.addCommand({
+      id: 'deploy',
+      name: 'Deploy',
+      callback: async () => {
+        const { deployHook } = this.settings;
+        await deploy(deployHook);
       },
     });
 
