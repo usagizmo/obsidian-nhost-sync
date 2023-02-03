@@ -4,7 +4,7 @@ Sync notes & attachments under a specific Obsidian directory to Nhost's Database
 
 \[DEMO (ja)\]: https://usagizmo.com/notes/obsidian-nhost-sync
 
-![nhost-sync-settings](https://user-images.githubusercontent.com/1271863/215930660-47d146a8-8786-40ba-ad54-7ffe0b3bead0.png)
+![nhost-sync-settings](https://user-images.githubusercontent.com/1271863/216643065-6e6461cf-51ec-44ff-9c8d-47b6758d8480.png)
 ![nhost-01](https://user-images.githubusercontent.com/1271863/215930648-82f1ea8f-1456-4d93-a6e5-3f67d323b245.png)
 ![nhost-02](https://user-images.githubusercontent.com/1271863/215930657-76b14f03-c61d-4a69-a289-ff97f34ff709.png)
 
