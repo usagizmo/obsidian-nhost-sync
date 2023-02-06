@@ -1,3 +1,5 @@
+codemirror
+esbuild
 hasura
 nhost
 pkey
