@@ -1,4 +1,4 @@
-import { Plugin } from 'obsidian';
+import { App, Plugin, PluginManifest } from 'obsidian';
 import { deploy } from 'src/deploy';
 import { Publisher } from 'src/Publisher';
 import { SettingTab } from 'src/SettingTab';
@@ -25,6 +25,11 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 
 export default class MyPlugin extends Plugin {
   settings: MyPluginSettings;
+
+  constructor(app: App, manifest: PluginManifest) {
+    super(app, manifest);
+    this.settings = DEFAULT_SETTINGS;
+  }
 
   async onload() {
     await this.loadSettings();
