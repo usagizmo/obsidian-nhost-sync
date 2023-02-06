@@ -55,7 +55,7 @@ export class Publisher {
     const attachmentNotes = await this.getRelatedAttachmentNotes(fileByName, mdNotes);
     await this.uploadAttachmentNotes(attachmentNotes);
 
-    await this.deleteUnusedDBNotes(mdNotes.concat(mdNotes));
+    await this.deleteUnusedDBNotes(mdNotes.concat(attachmentNotes));
     await this.deleteUnusedDBFiles();
 
     new Notice('Published');
@@ -96,6 +96,11 @@ export class Publisher {
       (note) => settings.cache.noteByPath[note.path] !== note.stat.mtime
     );
 
+    if (!shouldUploadNotes.length) {
+      console.log(`Attachment: No notes to upload.`);
+      return;
+    }
+
     const mdNotes = await Promise.all(
       shouldUploadNotes.map(async (note) => {
         const content = await app.vault.cachedRead(note);
@@ -135,15 +140,14 @@ export class Publisher {
     );
 
     if (!intermediateShouldUploadNotes.length) {
-      console.log(`File: No files to upload.`);
+      console.log(`Attachment: No files to upload.`);
       return;
     }
 
-    console.log(`File: Uploading ${intermediateShouldUploadNotes.length} files.`);
     const fileIdOrNulls = await Promise.all(
       intermediateShouldUploadNotes.map((note) => this.uploadToStorage(note))
     );
-    console.log(`File: Uploaded ${fileIdOrNulls.filter(Boolean).length} files.`);
+    console.log(`Attachment: Uploaded ${fileIdOrNulls.filter(Boolean).length} files.`);
 
     const shouldUploadNotes = intermediateShouldUploadNotes.filter(
       (_, i) => fileIdOrNulls[i] !== null
@@ -190,13 +194,6 @@ export class Publisher {
   private async insertNotes(title: string, iNotes: INote[]) {
     const { settings } = this.plugin;
 
-    if (!iNotes.length) {
-      console.log(`${title}: No notes to insert.`);
-      return;
-    }
-
-    console.log(`${title}: Inserting ${iNotes.length} notes.`);
-
     const query = gql`
       mutation InsertNotes($objects: [notes_insert_input!]!) {
         insert_notes(
@@ -210,8 +207,10 @@ export class Publisher {
     const {
       insert_notes: { affected_rows },
     } = await this.client.request(query, { objects: iNotes.map((iNote) => iNote.dbNote) });
+
     console.log(`${title}: Inserted ${affected_rows} notes.`);
 
+    // update cache
     const nextNoteByPath = iNotes.reduce((acc, iNote) => {
       acc[iNote.dbNote.path] = iNote.mtime;
       return acc;
@@ -239,7 +238,7 @@ export class Publisher {
     }>(notesQuery);
     const dbNotePaths = notesRes.map((note) => note.path);
 
-    console.log(`Notes: local [${notes.length}], DB [${dbNotePaths.length}]`);
+    console.log(`Notes: local [${notes.length}] → DB [${dbNotePaths.length}]`);
 
     const notePathSet = new Set(notes.map((note) => note.path));
     const shouldDeleteNotePaths = dbNotePaths.filter((path) => !notePathSet.has(path));
@@ -285,7 +284,7 @@ export class Publisher {
     const dbNoteFileIdSet = new Set(notesRes.map((note) => note.fileId).filter(Boolean));
     const dbFileIds = filesRes.map((file) => file.id);
 
-    console.log(`Files: notes [${dbNoteFileIdSet.size}], files [${dbFileIds.length}]`);
+    console.log(`Attachment: local [${dbNoteFileIdSet.size}] → DB [${dbFileIds.length}]`);
 
     const shouldDeleteFileIds = dbFileIds.filter((fileId) => !dbNoteFileIdSet.has(fileId));
 
