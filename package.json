@@ -1,6 +1,6 @@
 {
   "name": "obsidian-nhost-sync",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Sync obsidian notes with `publish: true` front-matter and their associated data to Nhost's DB / Storage",
   "main": "main.js",
   "scripts": {
