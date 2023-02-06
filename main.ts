@@ -4,7 +4,6 @@ import { Publisher } from 'src/Publisher';
 import { SettingTab } from 'src/SettingTab';
 
 interface MyPluginSettings {
-  publicDir: string;
   subdomain: string;
   region: string;
   endpoint: string;
@@ -16,7 +15,6 @@ interface MyPluginSettings {
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
-  publicDir: 'Public',
   subdomain: '',
   region: '',
   endpoint: '',

@@ -16,19 +16,6 @@ export class SettingTab extends PluginSettingTab {
 
     containerEl.createEl('h2', { text: 'Nhost Sync - Settings' });
 
-    new Setting(containerEl)
-      .setName('Public Directory')
-      .setDesc('Directory to be synchronized')
-      .addText((cb) =>
-        cb
-          .setPlaceholder('Public')
-          .setValue(this.plugin.settings.publicDir)
-          .onChange(async (value) => {
-            this.plugin.settings.publicDir = value.replace(/\/$/, '');
-            await this.plugin.saveSettings();
-          })
-      );
-
     new Setting(containerEl).setHeading().setName('Nhost').setDesc('Used in the `Publish` command');
 
     new Setting(containerEl).setName('Subdomain').addText((cb) =>
@@ -62,16 +49,6 @@ export class SettingTab extends PluginSettingTab {
         })
     );
 
-    new Setting(containerEl).setHeading().setName('Caches');
-
-    new Setting(containerEl).setName('Clear all caches').addButton((cb) => {
-      cb.setButtonText('Clear').onClick(async () => {
-        this.plugin.settings.cache = { noteByPath: {} };
-        new Notice('All caches cleared');
-        await this.plugin.saveSettings();
-      });
-    });
-
     new Setting(containerEl).setHeading().setName('Server [optional]');
 
     new Setting(containerEl)
@@ -86,5 +63,18 @@ export class SettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    new Setting(containerEl).setHeading().setName('Caches');
+
+    new Setting(containerEl)
+      .setName('Clear all caches')
+      .setDesc('The next `Publish` will also upload any notes that have already been uploaded')
+      .addButton((cb) => {
+        cb.setButtonText('Clear').onClick(async () => {
+          this.plugin.settings.cache = { noteByPath: {} };
+          new Notice('All caches cleared');
+          await this.plugin.saveSettings();
+        });
+      });
   }
 }
