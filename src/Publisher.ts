@@ -10,6 +10,7 @@ import matter from 'front-matter';
 import { MDNote } from './models/MDNote';
 import { FileNote } from './models/FileNote';
 import { INote } from './models/INote';
+import { pbMatcher } from './utils/pbMatcher';
 
 type FileByName = { [name: string]: TFile | undefined };
 
@@ -122,7 +123,7 @@ export class Publisher {
       notes.map(async (note) => {
         const content = await vault.cachedRead(note);
 
-        for (const match of content.matchAll(/!\[\[([^\]]+?(?:png|jpg|mp4))\|?(\d+)?\]\]/g)) {
+        for (const match of content.matchAll(pbMatcher.attachment)) {
           const note = fileByName[match[1]] ?? '';
           note && relatedAttachmentNoteSet.add(note);
         }
