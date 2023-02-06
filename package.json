@@ -1,7 +1,7 @@
 {
   "name": "obsidian-nhost-sync",
-  "version": "0.2.0",
-  "description": "Sync note attachments under a specific Obsidian directory to Nhost's Database / Storage",
+  "version": "0.3.0",
+  "description": "Sync obsidian notes with `publish: true` front-matter and their associated data to Nhost's DB / Storage",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
