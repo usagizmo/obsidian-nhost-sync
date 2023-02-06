@@ -6,9 +6,12 @@ import { join } from 'path';
 import { readFile } from 'fs/promises';
 import FormData from 'form-data';
 import mime from 'mime/lite';
+import matter from 'front-matter';
 import { MDNote } from './models/MDNote';
 import { FileNote } from './models/FileNote';
 import { INote } from './models/INote';
+
+type FileByName = { [name: string]: TFile | undefined };
 
 const getBasePath = (adapter: DataAdapter): string => {
   if (!(adapter instanceof FileSystemAdapter)) {
@@ -21,7 +24,6 @@ export class Publisher {
   plugin: MyPlugin;
   nhost: NhostClient;
   client: GraphQLClient;
-  notes: TFile[];
 
   constructor(plugin: MyPlugin) {
     const { settings } = plugin;
@@ -43,45 +45,93 @@ export class Publisher {
         'x-hasura-admin-secret': settings.adminSecret,
       },
     });
-
-    this.notes = app.vault.getFiles().filter((file) => file.path.startsWith(settings.publicDir));
   }
 
   async publish() {
-    const notes = this.notes.filter((file) => file.extension === 'md');
-    const notesWithFile = this.notes.filter((file) => file.extension !== 'md');
+    const { fileByName, mdNotes } = await this.getVaultData();
 
-    await this.uploadNotes(notes);
-    await this.uploadNotesWithFile(notesWithFile);
+    await this.uploadNotes(mdNotes);
 
-    await this.deleteUnusedDBNotes();
+    const attachmentNotes = await this.getRelatedAttachmentNotes(fileByName, mdNotes);
+    await this.uploadAttachmentNotes(attachmentNotes);
+
+    await this.deleteUnusedDBNotes(mdNotes.concat(mdNotes));
     await this.deleteUnusedDBFiles();
 
     new Notice('Published');
   }
 
+  private async getVaultData(): Promise<{
+    fileByName: FileByName;
+    mdNotes: TFile[];
+  }> {
+    const { vault } = app;
+
+    const mdNotes: TFile[] = [];
+    const fileByName: FileByName = {};
+
+    await Promise.all(
+      vault.getFiles().map(async (note) => {
+        // overwrite if same name
+        fileByName[note.name] = note;
+        if (note.name.endsWith('.md') === false) return;
+
+        // get publishable notes
+        const mattered = matter<{ publish?: boolean }>(await vault.cachedRead(note));
+        if (!mattered.attributes.publish) return;
+        mdNotes.push(note);
+      })
+    );
+
+    return {
+      fileByName,
+      mdNotes,
+    };
+  }
+
   private async uploadNotes(notes: TFile[]) {
-    const { settings, app } = this.plugin;
+    const { settings } = this.plugin;
 
     const shouldUploadNotes = notes.filter(
-      (file) => settings.cache.noteByPath[file.path] !== file.stat.mtime
+      (note) => settings.cache.noteByPath[note.path] !== note.stat.mtime
     );
 
     const mdNotes = await Promise.all(
-      shouldUploadNotes.map(async (file) => {
-        const content = await app.vault.cachedRead(file);
-        return new MDNote(file, content);
+      shouldUploadNotes.map(async (note) => {
+        const content = await app.vault.cachedRead(note);
+        return new MDNote(note, content);
       })
     );
 
     this.insertNotes('Note', mdNotes);
   }
 
-  private async uploadNotesWithFile(notes: TFile[]) {
+  private async getRelatedAttachmentNotes(
+    fileByName: FileByName,
+    notes: TFile[]
+  ): Promise<TFile[]> {
+    const { vault } = app;
+    const relatedAttachmentNoteSet = new Set<TFile>();
+
+    await Promise.all(
+      notes.map(async (note) => {
+        const content = await vault.cachedRead(note);
+
+        for (const match of content.matchAll(/!\[\[([^\]]+?(?:png|jpg|mp4))\|?(\d+)?\]\]/g)) {
+          const note = fileByName[match[1]] ?? '';
+          note && relatedAttachmentNoteSet.add(note);
+        }
+      })
+    );
+
+    return [...relatedAttachmentNoteSet];
+  }
+
+  private async uploadAttachmentNotes(notes: TFile[]) {
     const { settings } = this.plugin;
 
     const intermediateShouldUploadNotes = notes.filter(
-      (file) => settings.cache.noteByPath[file.path] !== file.stat.mtime
+      (note) => settings.cache.noteByPath[note.path] !== note.stat.mtime
     );
 
     if (!intermediateShouldUploadNotes.length) {
@@ -99,18 +149,17 @@ export class Publisher {
       (_, i) => fileIdOrNulls[i] !== null
     );
 
-    const fileNotes = await Promise.all(
-      shouldUploadNotes.map(async (file, i) => {
+    const attachmentNotes = await Promise.all(
+      shouldUploadNotes.map(async (note, i) => {
         const fileId = fileIdOrNulls[i] as string;
-        return new FileNote(file, fileId);
+        return new FileNote(note, fileId);
       })
     );
 
-    this.insertNotes('File', fileNotes);
+    this.insertNotes('File', attachmentNotes);
   }
 
   private async uploadToStorage(note: TFile): Promise<string | null> {
-    const { app } = this.plugin;
     const basePath = getBasePath(app.vault.adapter);
 
     const fd = new FormData();
@@ -175,7 +224,7 @@ export class Publisher {
     await this.plugin.saveSettings();
   }
 
-  private async deleteUnusedDBNotes() {
+  private async deleteUnusedDBNotes(notes: TFile[]) {
     const { settings } = this.plugin;
 
     const notesQuery = gql`
@@ -190,9 +239,9 @@ export class Publisher {
     }>(notesQuery);
     const dbNotePaths = notesRes.map((note) => note.path);
 
-    console.log(`Notes: local [${this.notes.length}], DB [${dbNotePaths.length}]`);
+    console.log(`Notes: local [${notes.length}], DB [${dbNotePaths.length}]`);
 
-    const notePathSet = new Set(this.notes.map((note) => note.path));
+    const notePathSet = new Set(notes.map((note) => note.path));
     const shouldDeleteNotePaths = dbNotePaths.filter((path) => !notePathSet.has(path));
 
     const deleteNotesMutation = gql`
