@@ -51,6 +51,7 @@ export class Publisher {
   async publish() {
     const { fileByName, mdNotes } = await this.getVaultData();
 
+    console.group('Nhost Sync: Publish');
     await this.uploadNotes(mdNotes);
 
     const attachmentNotes = await this.getRelatedAttachmentNotes(fileByName, mdNotes);
@@ -58,6 +59,7 @@ export class Publisher {
 
     await this.deleteUnusedDBNotes(mdNotes.concat(attachmentNotes));
     await this.deleteUnusedDBFiles();
+    console.groupEnd();
 
     new Notice('Published');
   }
